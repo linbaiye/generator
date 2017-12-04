@@ -61,4 +61,9 @@ public class InvalidConfigurationException extends Exception {
 
         return super.getMessage();
     }
+    
+    public InvalidConfigurationException(Throwable throwable) {
+    		super(throwable);
+    }
+
 }
