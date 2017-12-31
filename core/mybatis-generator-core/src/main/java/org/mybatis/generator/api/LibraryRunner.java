@@ -15,14 +15,11 @@
  */
 package org.mybatis.generator.api;
 
-import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.mybatis.generator.config.Configuration;
 import org.mybatis.generator.config.xml.ConfigurationParser;
@@ -39,18 +36,16 @@ public class LibraryRunner {
 
 	private MyBatisGenerator myBatisGenerator;
 
-	public void parse(String configFile) throws InvalidConfigurationException {
+	public void parse(InputStream inputStream) throws InvalidConfigurationException {
+		if (inputStream == null) {
+			throw new IllegalArgumentException("null pointor passed.");
+		}
 
 		List<String> warnings = new ArrayList<String>();
 
-		File configurationFile = new File(configFile);
-		if (!configurationFile.exists()) {
-			throw new InvalidConfigurationException(Arrays.asList("Configuration file does not exist."));
-		}
-
 		try {
 			ConfigurationParser cp = new ConfigurationParser(warnings);
-			Configuration config = cp.parseConfiguration(configurationFile);
+			Configuration config = cp.parseConfiguration(inputStream);
 
 			DefaultShellCallback shellCallback = new DefaultShellCallback(false);
 

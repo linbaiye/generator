@@ -62,7 +62,7 @@ public class PagingAndLockPlugin extends PluginAdapter{
 		Method method = buildMethod("set", name, returnFqType);
 		method.addParameter(
 				new Parameter(new FullyQualifiedJavaType(paramType), name));
-		method.addBodyLine("this." + name + " = " + name);
+		method.addBodyLine("this." + name + " = " + name + ";");
 		return method;
 	}
 	
@@ -81,7 +81,8 @@ public class PagingAndLockPlugin extends PluginAdapter{
 
     		Method method = buildSetter("lockSelectedRows", "void", "java.lang.Boolean");
     		method.addJavaDocLine("/**");
-    		method.addJavaDocLine(" * Set true to append 'for update' clause to this query.");
+    		method.addJavaDocLine(" * Set true to append 'for update' clause to this query,");
+    		method.addJavaDocLine(" * it only has effect on select queries.");
     		method.addJavaDocLine(" */");
     		topLevelClass.addMethod(method);
     		topLevelClass.addMethod(buildGetter("lockSelectedRows", "java.lang.Boolean"));
@@ -114,12 +115,4 @@ public class PagingAndLockPlugin extends PluginAdapter{
     		element.addElement(ifElement("lockSelectedRows != null and lockSelectedRows == true", "for update"));
         return true;
     }
-
-    @Override
-    public boolean sqlMapSelectByPrimaryKeyElementGenerated(XmlElement element,
-            IntrospectedTable introspectedTable) {
-    		element.addElement(ifElement("lockSelectedRows != null and lockSelectedRows == true", "for update"));
-        return true;
-    }
-
 }
