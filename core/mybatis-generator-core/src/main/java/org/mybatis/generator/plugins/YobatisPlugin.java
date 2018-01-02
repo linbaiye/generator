@@ -153,6 +153,7 @@ public class YobatisPlugin extends PluginAdapter {
 			" * @return 1 the record can be found based on the primary key, 0 else.",
 			" */"};
 
+    private static final Map<String, String> TYPE_MAP = new HashMap<String, String>();
 	static {
 		JAVADOCS.put("countByCriteria", COUNT_BY_CRITERIA_JAVADOC);
 		JAVADOCS.put("deleteByCriteria", DELETE_BY_CRITERIA_JAVADOC);
@@ -165,6 +166,13 @@ public class YobatisPlugin extends PluginAdapter {
 		JAVADOCS.put("updateByCriteria", UPDATE_BY_CRITERIA_JAVADOC);
 		JAVADOCS.put("updateByPrimaryKeySelective", UPDATE_SELECTIVE_BY_PK_JAVADOC);
 		JAVADOCS.put("updateByPrimaryKey", UPDATE_BY_PK_JAVADOC);
+		
+		TYPE_MAP.put("java.lang.Long", "long");
+		TYPE_MAP.put("java.lang.Integer", "int");
+		TYPE_MAP.put("java.lang.Double", "double");
+		TYPE_MAP.put("java.lang.Float", "float");
+		TYPE_MAP.put("java.lang.Short", "short");
+		TYPE_MAP.put("java.lang.Byte", "byte");
 	}
 
 	@Override
@@ -292,9 +300,6 @@ public class YobatisPlugin extends PluginAdapter {
 
     private final static Pattern PACKAGE_PATTERN = Pattern.compile("\\.([a-zA-Z_0-9]+Criteria)$");
 
-    //private final static String CRITERIA_CLASS_REGEX =  "^[a-zA-Z_0-9]+Criteria$";
-    //private final static Pattern IMPORT_PATTERN = Pattern.compile("^import\\s+.+\\.([a-zA-Z_0-9]+Criteria)$");
-
     @Override
     public boolean modelExampleClassGenerated(TopLevelClass topLevelClass,
             IntrospectedTable introspectedTable)  {
@@ -320,6 +325,15 @@ public class YobatisPlugin extends PluginAdapter {
     public boolean sqlMapInsertSelectiveElementGenerated(XmlElement element,
            IntrospectedTable introspectedTable) {
     		return true;
+    }
+    
+    
+    
+
+
+    private void unboxPrimitivePrimaryKey(XmlElement xmlElement) {
+    		Attribute attribute;
+    		//kfor ()
     }
     
     
