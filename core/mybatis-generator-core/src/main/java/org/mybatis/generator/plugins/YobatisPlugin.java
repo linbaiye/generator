@@ -15,23 +15,157 @@
  */
 package org.mybatis.generator.plugins;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.mybatis.generator.api.IntrospectedTable;
 import org.mybatis.generator.api.PluginAdapter;
+import org.mybatis.generator.api.dom.java.FullyQualifiedJavaType;
 import org.mybatis.generator.api.dom.java.Interface;
 import org.mybatis.generator.api.dom.java.Method;
 import org.mybatis.generator.api.dom.java.Parameter;
+import org.mybatis.generator.api.dom.java.TopLevelClass;
 import org.mybatis.generator.api.dom.xml.Attribute;
 import org.mybatis.generator.api.dom.xml.Document;
 import org.mybatis.generator.api.dom.xml.Element;
 import org.mybatis.generator.api.dom.xml.XmlElement;
 
+
 public class YobatisPlugin extends PluginAdapter {
+	
+	private final static Map<String, String[]> JAVADOCS = new HashMap<String, String[]>();
+	
+    //long countByCriteria(BookCriteria criteria);
+	private final static String[] COUNT_BY_CRITERIA_JAVADOC = new String[] {
+			"/**",
+			" * Count the number of selected records, count the whole table if",
+			" * the criteria is null, use with care.",
+			" * @param criteria the criteria to select records.",
+			" * @return the number.",
+			" */"};
+
+    //int deleteByCriteria(BookCriteria criteria);
+	private final static String[] DELETE_BY_CRITERIA_JAVADOC = new String[] {
+			"/**",
+			" * Delete records based on the {@code criteria}.",
+			" * @param criteria the criteria to select records.",
+			" * @return the number of deleted records.",
+			" * @throws PersistenceException if null passed.",
+			" */"};
+
+    //int deleteByPrimaryKey(Long id);
+	private final static String[] DELETE_BY_PK_JAVADOC = new String[] {
+			"/**",
+			" * Delete record by primary key. The query will be evaluated as",
+			" * <pre>delete from table where pk = null</pre> if null passed.",
+			" * @param id the primary key.",
+			" * @return 1 if the record has been deleted, 0 if not.",
+			" */"};
+
+	//  int insert(Customer record);
+	private final static String[] INSERT_JAVADOC = new String[] {
+			"/**",
+			" * Insert a record.",
+			" * <p>All fields except the primary key will be inserted regardless of whether",
+			" * null or not, the primary key field(id) will hold the generated value after insertion.",
+			" * <p>Passing null has the same effect of passing a record whose fields are null.",
+			" * @param record the record to insert.",
+			" * @return 1 if the record has been inserted.",
+			" */"};
+
+	//    int insertSelective(Customer record);
+	private final static String[] INSERT_SELECTIVE_JAVADOC = new String[] {
+			"/**",
+			" * Insert a record ignoring null fields.",
+			" * <p>All non-null fields except the primary key will be inserted,",
+			" * the primary key field(id) will hold the generated value after insertion.",
+			" * <p>Passing null has the same effect of passing a record whose fields are null.",
+			" * @param record the record to insert.",
+			" * @return 1 if the record has been inserted.",
+			" */"};
+
+	//   List<Customer> selectByCriteria(CustomerCriteria criteria);
+	private final static String[] SELECT_CRITERIA_JAVADOC = new String[] {
+			"/**",
+			" * Select records according to the {@code criteria}, all records will be",
+			" * selected if the {@code criteria} is null, use with care.",
+			" * @param criteria the criteria to select records.",
+			" * @return the selected records if any, empty list if none meets the criteria.",
+			" */"};
+
+    //Customer selectByPrimaryKey(Long id);
+	private final static String[] SELECT_PK_JAVADOC = new String[] {
+			"/**",
+			" * Select record by primary key. The query will be evaluated as",
+			" * <pre>select fields from table where pk = null</pre> if null passed.",
+			" * @param id the primary key.",
+			" * @return the selected record if found, null else.",
+			" */"};
+
+    //int updateByCriteriaSelective(@Param("record") Customer record, @Param("criteria") CustomerCriteria criteria);
+	private final static String[] UPDATE_SELECTIVE_BY_CRITERIA_JAVADOC = new String[] {
+			"/**",
+			" * Update records' columns to corresponding non-null fields in {@code record},",
+			" * null fields are ignored. Not setting {@code criteria} will update",
+			" * the whole table, shown as the example below.",
+			" * <pre>mapper.updateByCriteriaSelective(record, new RecordCriteria())</pre>",
+			" * @param record the record that holds new values.",
+			" * @param criteria the criteria to query records to update.",
+			" * @return the number of updated rows.",
+			" * @throws PersistenceException if null criteria or null record passed.",
+			" */"};
+
+    //int updateByCriteria(@Param("record") Customer record, @Param("criteria") CustomerCriteria criteria);
+	private final static String[] UPDATE_BY_CRITERIA_JAVADOC = new String[] {
+			"/**",
+			" * Update records' columns to corresponding fields in {@code record}, regardless of",
+			" * whether the field is null or not. Not setting {@code criteria} will update",
+			" * the whole table, shown as the example below.",
+			" * <pre>mapper.updateByCriteria(record, new RecordCriteria())</pre>",
+			" * @param record the record that holds new values.",
+			" * @param criteria the criteria to query records to update.",
+			" * @return the number of updated rows.",
+			" * @throws PersistenceException if null criteria or null record passed.",
+			" */"};
+
+    //int updateByPrimaryKeySelective(Customer record);
+	private final static String[] UPDATE_SELECTIVE_BY_PK_JAVADOC = new String[] {
+			"/**",
+			" * Update record's columns to corresponding non-null fields in {@code record},",
+			" * null fields are ignored.",
+			" * @param record the record that holds new values.",
+			" * @return 1 the record can be found based on the primary key, 0 else.",
+			" */"};
+
+    //int updateByPrimaryKey(Customer record);
+	private final static String[] UPDATE_BY_PK_JAVADOC = new String[] {
+			"/**",
+			" * Update record's columns to corresponding fields in {@code record}, regardless of",
+			" * whether the field is null or not.",
+			" * @param record the record that holds new values.",
+			" * @return 1 the record can be found based on the primary key, 0 else.",
+			" */"};
+
+	static {
+		JAVADOCS.put("countByCriteria", COUNT_BY_CRITERIA_JAVADOC);
+		JAVADOCS.put("deleteByCriteria", DELETE_BY_CRITERIA_JAVADOC);
+		JAVADOCS.put("deleteByPrimaryKey", DELETE_BY_PK_JAVADOC);
+		JAVADOCS.put("insert", INSERT_JAVADOC);
+		JAVADOCS.put("insertSelective", INSERT_SELECTIVE_JAVADOC);
+		JAVADOCS.put("selectByCriteria", SELECT_CRITERIA_JAVADOC);
+		JAVADOCS.put("selectByPrimaryKey", SELECT_PK_JAVADOC);
+		JAVADOCS.put("updateByCriteriaSelective", UPDATE_SELECTIVE_BY_CRITERIA_JAVADOC);
+		JAVADOCS.put("updateByCriteria", UPDATE_BY_CRITERIA_JAVADOC);
+		JAVADOCS.put("updateByPrimaryKeySelective", UPDATE_SELECTIVE_BY_PK_JAVADOC);
+		JAVADOCS.put("updateByPrimaryKey", UPDATE_BY_PK_JAVADOC);
+	}
 
 	@Override
 	public boolean validate(List<String> warnings) {
@@ -155,7 +289,115 @@ public class YobatisPlugin extends PluginAdapter {
             IntrospectedTable introspectedTable) {
     		return false;
     }
+
+    private final static Pattern PACKAGE_PATTERN = Pattern.compile("\\.([a-zA-Z_0-9]+Criteria)$");
+
+    //private final static String CRITERIA_CLASS_REGEX =  "^[a-zA-Z_0-9]+Criteria$";
+    //private final static Pattern IMPORT_PATTERN = Pattern.compile("^import\\s+.+\\.([a-zA-Z_0-9]+Criteria)$");
+
+    @Override
+    public boolean modelExampleClassGenerated(TopLevelClass topLevelClass,
+            IntrospectedTable introspectedTable)  {
+    		FullyQualifiedJavaType type = topLevelClass.getType();
+    		try {
+    			addCriteriaToPackageName(type);
+		} catch (Exception e) {
+			throw new IllegalStateException(e);
+		}
+    		return true;
+    }
+
     
+    @Override
+    public boolean sqlMapInsertElementGenerated(XmlElement element,
+           IntrospectedTable introspectedTable) {
+    		
+    		return true;
+    }
+
+  
+    @Override
+    public boolean sqlMapInsertSelectiveElementGenerated(XmlElement element,
+           IntrospectedTable introspectedTable) {
+    		return true;
+    }
+    
+    
+    private void modifyMethodParameterTypeAndJavadoc(List<Method> methods) {
+    		for (Method method: methods) {
+    			List<Parameter> parameters =  method.getParameters();
+    			Parameter newParameter = null;
+    			Iterator<Parameter> iterator = parameters.iterator();
+    			while (iterator.hasNext()) {
+    				Parameter parameter = iterator.next();
+    				Matcher matcher = PACKAGE_PATTERN.matcher(parameter.getType().getFullyQualifiedName());
+    				if (matcher.find()) {
+    					newParameter = new Parameter(
+    							new FullyQualifiedJavaType(matcher.replaceFirst(".criteria.$1")), 
+    							parameter.getName());
+    					for (String annotation: parameter.getAnnotations()) {
+    						newParameter.addAnnotation(annotation);
+    					}
+    					iterator.remove();
+    					break;
+    				}
+    			}
+    			method.getJavaDocLines().clear();
+    			String[] javdoc = JAVADOCS.get(method.getName());
+    			if (javdoc != null) {
+    				for (String line: javdoc) {
+    					method.addJavaDocLine(line);
+    				}
+    			}
+    			if (newParameter != null) {
+    				parameters.add(newParameter);
+    			}
+    		}
+    }
+    
+    @Override
+    public boolean clientGenerated(Interface interfaze, TopLevelClass topLevelClass,
+            IntrospectedTable introspectedTable) {
+    		Set<FullyQualifiedJavaType> types = interfaze.getImportedTypes();
+    		Iterator<FullyQualifiedJavaType> iterator = types.iterator();
+    		FullyQualifiedJavaType newType = null;
+    		while (iterator.hasNext()) {
+    			FullyQualifiedJavaType type = iterator.next();
+    			Matcher matcher = PACKAGE_PATTERN.matcher(type.getFullyQualifiedName());
+    			if (matcher.find()) {
+    				iterator.remove();
+    				newType = new FullyQualifiedJavaType(matcher.replaceFirst(".criteria.$1"));
+    			}
+    		}
+    		if (newType != null) {
+    			types.add(newType);
+    		}
+    		modifyMethodParameterTypeAndJavadoc(interfaze.getMethods());
+    		return true;
+    }
+    
+    public static void main(String[] args) {
+    			Matcher matcher = PACKAGE_PATTERN.matcher("import moa.asd.model.TestCriteria");
+    			System.out.println(matcher.find());
+    			System.out.println(matcher.replaceAll(".criteria.$1"));
+    }
+    
+    private void addCriteriaToPackageName(FullyQualifiedJavaType type) {
+    		try {
+    			Field field = type.getClass().getDeclaredField("packageName");
+			field.setAccessible(true);
+			field.set(type, type.getPackageName() + ".criteria");
+
+			Matcher matcher = PACKAGE_PATTERN.matcher(type.getFullyQualifiedName());
+			if (matcher.find()) {
+				field = type.getClass().getDeclaredField("baseQualifiedName");
+				field.setAccessible(true);
+				field.set(type, matcher.replaceFirst(".criteria.$1"));
+			}
+    		} catch (Exception e) {
+    			throw new IllegalStateException(e);
+		}
+    }
     
     //Prohibit passing null criteria which will
     //take effect on the whole table.
@@ -187,6 +429,13 @@ public class YobatisPlugin extends PluginAdapter {
     		}
     }
     
+    @Override
+    public boolean sqlMapDeleteByExampleElementGenerated(XmlElement element,
+           IntrospectedTable introspectedTable) {
+    		disableNullCriteria(element);
+    		return true;
+    }
+    
     private void replaceExampleParameter(XmlElement xmlElement)  {
     		XmlElement where = null;
     		for (Element element : xmlElement.getElements()) {
@@ -214,6 +463,45 @@ public class YobatisPlugin extends PluginAdapter {
     		}
     }
     
+    
+    private void replaceCriteriaPackageNameInXml(XmlElement xmlElement) {
+    		Iterator<Attribute> iterator = xmlElement.getAttributes().iterator();
+    		Attribute newAttribute = null;
+    		while (iterator.hasNext()) {
+    			Attribute attribute = iterator.next();
+    			if (!"parameterType".equals(attribute.getName())) {
+    				continue;
+    			}
+    			//Replace the criteria's package name.
+    			Matcher matcher = PACKAGE_PATTERN.matcher(attribute.getValue());
+    			if (matcher.find()) {
+    				newAttribute = new Attribute(attribute.getName(), matcher.replaceFirst(".criteria.$1"));
+    				iterator.remove();
+    				break;
+    			}
+    		}
+    		if (newAttribute != null) {
+    			xmlElement.getAttributes().add(1, newAttribute);
+    		}
+    }
+    
+    private void modifyCommentInXml(XmlElement xmlElement) {
+    		Iterator<Element> iterator = xmlElement.getElements().iterator();
+    		boolean commentStart = false;
+    		while (iterator.hasNext()) {
+    			Element element = iterator.next();
+    			if (element.getFormattedContent(0).contains("<!--")) {
+    				commentStart = true;
+    			} else if (element.getFormattedContent(0).contains("-->")) {
+    				return;
+    			} else if (commentStart &&
+    					(element.getFormattedContent(0).contains("This element was generated"))) {
+    				iterator.remove();
+    			}
+    		}
+    }
+    
+
     @Override
     public boolean sqlMapDocumentGenerated(Document document,
             IntrospectedTable introspectedTable) {
@@ -223,17 +511,15 @@ public class YobatisPlugin extends PluginAdapter {
     				continue;
 			}
 			XmlElement xmlElement = (XmlElement) element;
-    			XmlElement target = null;
 			for (Attribute attribute : xmlElement.getAttributes()) {
 				if ("id".equals(attribute.getName()) &&
 						"WHERE_CLAUSE_FOR_UPDATE".equals(attribute.getValue())) {
-					target = xmlElement;
+					replaceExampleParameter(xmlElement);
 					break;
 				}
 			}
-			if (target != null) {
-				replaceExampleParameter(target);
-			}
+			replaceCriteriaPackageNameInXml(xmlElement);
+			modifyCommentInXml(xmlElement);
 		}
     		return true;
     }
