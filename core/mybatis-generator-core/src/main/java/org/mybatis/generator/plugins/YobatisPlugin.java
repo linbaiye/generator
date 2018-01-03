@@ -28,6 +28,7 @@ import java.util.regex.Pattern;
 import org.mybatis.generator.api.IntrospectedTable;
 import org.mybatis.generator.api.PluginAdapter;
 import org.mybatis.generator.api.dom.java.FullyQualifiedJavaType;
+import org.mybatis.generator.api.dom.java.InnerClass;
 import org.mybatis.generator.api.dom.java.Interface;
 import org.mybatis.generator.api.dom.java.Method;
 import org.mybatis.generator.api.dom.java.Parameter;
@@ -45,10 +46,10 @@ public class YobatisPlugin extends PluginAdapter {
     //long countByCriteria(BookCriteria criteria);
 	private final static String[] COUNT_BY_CRITERIA_JAVADOC = new String[] {
 			"/**",
-			" * Count the number of selected records, count the whole table if",
-			" * the criteria is null, use with care.",
+			" * Count the number of selected records.",
 			" * @param criteria the criteria to select records.",
 			" * @return the number.",
+			" * @throws PersistenceException if null or empty criteria passed.",
 			" */"};
 
     //int deleteByCriteria(BookCriteria criteria);
@@ -57,7 +58,7 @@ public class YobatisPlugin extends PluginAdapter {
 			" * Delete records based on the {@code criteria}.",
 			" * @param criteria the criteria to select records.",
 			" * @return the number of deleted records.",
-			" * @throws PersistenceException if null passed.",
+			" * @throws PersistenceException if null or empty criteria passed.",
 			" */"};
 
     //int deleteByPrimaryKey(Long id);
@@ -69,7 +70,7 @@ public class YobatisPlugin extends PluginAdapter {
 			" * @return 1 if the record has been deleted, 0 if not.",
 			" */"};
 
-	//  int insert(Customer record);
+	//int insert(Customer record);
 	private final static String[] INSERT_JAVADOC = new String[] {
 			"/**",
 			" * Insert a record.",
@@ -80,24 +81,24 @@ public class YobatisPlugin extends PluginAdapter {
 			" * @return 1 if the record has been inserted.",
 			" */"};
 
-	//    int insertSelective(Customer record);
+	//int insertSelective(Customer record);
 	private final static String[] INSERT_SELECTIVE_JAVADOC = new String[] {
 			"/**",
 			" * Insert a record ignoring null fields.",
 			" * <p>All non-null fields except the primary key will be inserted,",
-			" * the primary key field(id) will hold the generated value after insertion.",
+			" * the primary key will hold the generated value after insertion.",
 			" * <p>Passing null has the same effect of passing a record whose fields are null.",
 			" * @param record the record to insert.",
 			" * @return 1 if the record has been inserted.",
 			" */"};
 
-	//   List<Customer> selectByCriteria(CustomerCriteria criteria);
+	//List<Customer> selectByCriteria(CustomerCriteria criteria);
 	private final static String[] SELECT_CRITERIA_JAVADOC = new String[] {
 			"/**",
-			" * Select records according to the {@code criteria}, all records will be",
-			" * selected if the {@code criteria} is null, use with care.",
+			" * Select records according to the {@code criteria}.",
 			" * @param criteria the criteria to select records.",
-			" * @return the selected records if any, empty list if none meets the criteria.",
+			" * @return a list of selected records if any, an empty list if none meets the criteria.",
+			" * @throws PersistenceException if null or empty criteria passed.",
 			" */"};
 
     //Customer selectByPrimaryKey(Long id);
@@ -112,27 +113,23 @@ public class YobatisPlugin extends PluginAdapter {
     //int updateByCriteriaSelective(@Param("record") Customer record, @Param("criteria") CustomerCriteria criteria);
 	private final static String[] UPDATE_SELECTIVE_BY_CRITERIA_JAVADOC = new String[] {
 			"/**",
-			" * Update records' columns to corresponding non-null fields in {@code record},",
-			" * null fields are ignored. Not setting {@code criteria} will update",
-			" * the whole table, shown as the example below.",
-			" * <pre>mapper.updateByCriteriaSelective(record, new RecordCriteria())</pre>",
+			" * Update columns of the records, selected by {@code criteria}, to corresponding",
+			" * non-null fields in {@code record}(null fields are ignored).",
 			" * @param record the record that holds new values.",
 			" * @param criteria the criteria to query records to update.",
-			" * @return the number of updated rows.",
-			" * @throws PersistenceException if null criteria or null record passed.",
+			" * @return the number of rows updated.",
+			" * @throws PersistenceException if the criteria is null or empty, or null record passed.",
 			" */"};
 
     //int updateByCriteria(@Param("record") Customer record, @Param("criteria") CustomerCriteria criteria);
 	private final static String[] UPDATE_BY_CRITERIA_JAVADOC = new String[] {
 			"/**",
-			" * Update records' columns to corresponding fields in {@code record}, regardless of",
-			" * whether the field is null or not. Not setting {@code criteria} will update",
-			" * the whole table, shown as the example below.",
-			" * <pre>mapper.updateByCriteria(record, new RecordCriteria())</pre>",
+			" * Update columns of the records, selected by {@code criteria}, to corresponding fields",
+			" * in {@code record}, regardless of whether the field is null or not.", 
 			" * @param record the record that holds new values.",
 			" * @param criteria the criteria to query records to update.",
-			" * @return the number of updated rows.",
-			" * @throws PersistenceException if null criteria or null record passed.",
+			" * @return the number of rows updated.",
+			" * @throws PersistenceException if the criteria is null or empty, or null record passed.",
 			" */"};
 
     //int updateByPrimaryKeySelective(Customer record);
@@ -141,7 +138,7 @@ public class YobatisPlugin extends PluginAdapter {
 			" * Update record's columns to corresponding non-null fields in {@code record},",
 			" * null fields are ignored.",
 			" * @param record the record that holds new values.",
-			" * @return 1 the record can be found based on the primary key, 0 else.",
+			" * @return 1 the record with the primary key can be found, 0 else.",
 			" */"};
 
     //int updateByPrimaryKey(Customer record);
@@ -227,6 +224,7 @@ public class YobatisPlugin extends PluginAdapter {
     		return false;
     }
     
+    
     @Override
     public boolean clientUpdateByPrimaryKeyWithBLOBsMethodGenerated(Method method,
             Interface interfaze, IntrospectedTable introspectedTable) {
@@ -247,6 +245,7 @@ public class YobatisPlugin extends PluginAdapter {
     		adjustExampledMethod(method);
     		return true;
     }
+    
 
     @Override
     public boolean clientSelectByExampleWithBLOBsMethodGenerated(Method method,
@@ -299,6 +298,35 @@ public class YobatisPlugin extends PluginAdapter {
     }
 
     private final static Pattern PACKAGE_PATTERN = Pattern.compile("\\.([a-zA-Z_0-9]+Criteria)$");
+    
+    
+    private void removeJavadoc(TopLevelClass topLevelClass) {
+    		for (Method method : topLevelClass.getMethods()) {
+    			method.getJavaDocLines().clear();
+    		}
+    		for (org.mybatis.generator.api.dom.java.Field field: topLevelClass.getFields()) {
+    			field.getJavaDocLines().clear();
+    		}
+
+    		for (InnerClass innerClass : topLevelClass.getInnerClasses()) {
+    			innerClass.getJavaDocLines().clear();
+    		}
+    }
+    
+    
+    private void throwExceptionWhenEmptyCrtieriaList(TopLevelClass topLevelClass) {
+    		for (Method method: topLevelClass.getMethods()) {
+    			if ("getOredCriteria".equals(method.getName())) {
+    				method.addBodyLine(0, "}");
+    				method.addBodyLine(0, "throw new PersistenceException(\"Empty criteria.\");");
+    				method.addBodyLine(0, "if (oredCriteria.isEmpty()) {");
+    				break;
+    			}
+    		}
+    		topLevelClass.addImportedType(new FullyQualifiedJavaType("org.apache.ibatis.exceptions.PersistenceException"));
+    	
+    }
+
 
     @Override
     public boolean modelExampleClassGenerated(TopLevelClass topLevelClass,
@@ -306,6 +334,16 @@ public class YobatisPlugin extends PluginAdapter {
     		FullyQualifiedJavaType type = topLevelClass.getType();
     		try {
     			addCriteriaToPackageName(type);
+    			removeJavadoc(topLevelClass);
+        		topLevelClass.addJavaDocLine(
+        				"/**");
+        		topLevelClass.addJavaDocLine(
+        				" * This class is generated by MyBatis Generator, do NOT modify.");
+        		topLevelClass.addJavaDocLine(
+        				" * Extend this class if it is found insufficient.");
+        		topLevelClass.addJavaDocLine(
+        				" */");
+    			throwExceptionWhenEmptyCrtieriaList(topLevelClass);
 		} catch (Exception e) {
 			throw new IllegalStateException(e);
 		}
@@ -313,29 +351,20 @@ public class YobatisPlugin extends PluginAdapter {
     }
 
     
+
     @Override
-    public boolean sqlMapInsertElementGenerated(XmlElement element,
-           IntrospectedTable introspectedTable) {
-    		
+    public boolean modelBaseRecordClassGenerated(TopLevelClass topLevelClass,
+            IntrospectedTable introspectedTable)  {
+    		removeJavadoc(topLevelClass);
+    		topLevelClass.addJavaDocLine("/**");
+    		topLevelClass.addJavaDocLine(" * This class corresponds to the table: " + introspectedTable.getFullyQualifiedTable() 
+    		+ ", it is generated by");
+    		topLevelClass.addJavaDocLine(" * Mybatis Generator, do NOT modify.");
+    		topLevelClass.addJavaDocLine(" * Extend this class if it is found insufficient.");
+    		topLevelClass.addJavaDocLine(" */");
     		return true;
     }
 
-  
-    @Override
-    public boolean sqlMapInsertSelectiveElementGenerated(XmlElement element,
-           IntrospectedTable introspectedTable) {
-    		return true;
-    }
-    
-    
-    
-
-
-    private void unboxPrimitivePrimaryKey(XmlElement xmlElement) {
-    		Attribute attribute;
-    		//kfor ()
-    }
-    
     
     private void modifyMethodParameterTypeAndJavadoc(List<Method> methods) {
     		for (Method method: methods) {
@@ -387,14 +416,13 @@ public class YobatisPlugin extends PluginAdapter {
     			types.add(newType);
     		}
     		modifyMethodParameterTypeAndJavadoc(interfaze.getMethods());
+    		interfaze.addJavaDocLine("/**");
+    		interfaze.addJavaDocLine(" * This class is generated by Mybatis Generator, and it is safe to modify.");
+    		interfaze.addJavaDocLine(" */");
     		return true;
     }
     
-    public static void main(String[] args) {
-    			Matcher matcher = PACKAGE_PATTERN.matcher("import moa.asd.model.TestCriteria");
-    			System.out.println(matcher.find());
-    			System.out.println(matcher.replaceAll(".criteria.$1"));
-    }
+
     
     private void addCriteriaToPackageName(FullyQualifiedJavaType type) {
     		try {
@@ -450,21 +478,10 @@ public class YobatisPlugin extends PluginAdapter {
     		return true;
     }
     
+
     private void replaceExampleParameter(XmlElement xmlElement)  {
-    		XmlElement where = null;
-    		for (Element element : xmlElement.getElements()) {
-    			if (element instanceof XmlElement) {
-    				where = (XmlElement)element;
-    				break;
-    			}
-    		}
-    		XmlElement foreach = null;
-    		for (Element element: where.getElements()) {
-    			if (element instanceof XmlElement) {
-    				foreach = (XmlElement)element;
-    				break;
-    			}
-    		}
+    		XmlElement where = findXmlElement(xmlElement, "where");
+    		XmlElement foreach = findXmlElement(where, "foreach");
     		Iterator<Attribute> iterator = foreach.getAttributes().iterator();
     		while (iterator.hasNext()) {
     			Attribute attribute = iterator.next();
@@ -510,10 +527,25 @@ public class YobatisPlugin extends PluginAdapter {
     				return;
     			} else if (commentStart &&
     					(element.getFormattedContent(0).contains("This element was generated"))) {
+    				//Remove this comment since it contains a timestamp which differs from time to time.
     				iterator.remove();
     			}
     		}
     }
+    
+    private XmlElement findXmlElement(XmlElement element, String name) {
+		for (Element e : element.getElements()) {
+			if (!(e instanceof XmlElement)) {
+				continue;
+			}
+			XmlElement tmp = (XmlElement)e;
+			if (name.equals(tmp.getName())) {
+				return tmp;
+			}
+		}
+		return null;
+    }
+    	
     
 
     @Override
