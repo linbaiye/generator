@@ -134,9 +134,9 @@ public class YobatisCriteriaPlugin extends PluginAdapter {
 		topLevelClass.addJavaDocLine(
 				" * here is an example that utilizes BookCriteria to build a where clause of<br>");
 		topLevelClass.addJavaDocLine(
-				" * '{@code author = \"Some guy\" and name = \"Some book\") or (name not in (\"hated ones\", \"boring ones\"))}");
+				" * {@code (author = \"Some author\" and name = \"Some book\") or (name not in (\"hated ones\", \"boring ones\"))}");
 		topLevelClass.addJavaDocLine(" * <pre>");
-		topLevelClass.addJavaDocLine(" * CustomerCriteria.authorEqualTo(\"Some guy\")");
+		topLevelClass.addJavaDocLine(" * CustomerCriteria.authorEqualTo(\"Some author\")");
 		topLevelClass.addJavaDocLine(" * .andNameEqualTo(\"Some book\")");
 		topLevelClass.addJavaDocLine(" * .or()");
 		topLevelClass.addJavaDocLine(" * .andNameNotIn(Arrays.asList(\"hated ones\", \"boring ones\"));");
