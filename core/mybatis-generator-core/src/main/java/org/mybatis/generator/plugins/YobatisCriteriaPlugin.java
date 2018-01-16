@@ -125,18 +125,18 @@ public class YobatisCriteriaPlugin extends PluginAdapter {
 		topLevelClass.addJavaDocLine("/**");
 		topLevelClass.addJavaDocLine(" * A " + topLevelClass.getType().getShortName() + " provides methods to construct 'where', 'limit', 'offset', 'for update'");
 		topLevelClass.addJavaDocLine(
-				" * clauses. Although building 'limit', 'offset', 'for update' and simple 'where' clauses are pretty");
+				" * clauses. Although building 'limit', 'offset', 'for update' and simple 'where' clauses is pretty");
 		topLevelClass.addJavaDocLine(" * intuitive, a complex 'where' clause requires a little bit more attention.");
 		topLevelClass.addJavaDocLine(
 				" * <p>A complex 'where' consists of multiple expressions that are ORed together, such as <br>");
-		topLevelClass.addJavaDocLine(" * {@code (id = 1 and field = 2) or (filed <= 3) or( ... ) ...}");
-		topLevelClass.addJavaDocLine(" * <p>Suppose we had a Book model which has an author field and a name field,");
+		topLevelClass.addJavaDocLine(" * {@code (id = 1 and field = 2) or (filed <= 3) or ( ... ) ...}");
+		topLevelClass.addJavaDocLine(" * <p>Suppose we had a Book model which has author and name fields,");
 		topLevelClass.addJavaDocLine(
 				" * here is an example that utilizes BookCriteria to build a where clause of<br>");
 		topLevelClass.addJavaDocLine(
 				" * {@code (author = \"Some author\" and name = \"Some book\") or (name not in (\"hated ones\", \"boring ones\"))}");
 		topLevelClass.addJavaDocLine(" * <pre>");
-		topLevelClass.addJavaDocLine(" * CustomerCriteria.authorEqualTo(\"Some author\")");
+		topLevelClass.addJavaDocLine(" * BookCriteria.authorEqualTo(\"Some author\")");
 		topLevelClass.addJavaDocLine(" * .andNameEqualTo(\"Some book\")");
 		topLevelClass.addJavaDocLine(" * .or()");
 		topLevelClass.addJavaDocLine(" * .andNameNotIn(Arrays.asList(\"hated ones\", \"boring ones\"));");
@@ -222,29 +222,46 @@ public class YobatisCriteriaPlugin extends PluginAdapter {
 
 	private Method proxyMethod(Method sourceMethod, TopLevelClass topLevelClass) {
 		Method method = new Method(sourceMethod);
-		method.getBodyLines().clear();
 		method.setReturnType(topLevelClass.getType());
+		String firstLine = sourceMethod.getBodyLines().get(0);
+		method.getBodyLines().clear();
 		StringBuilder stringBuilder = new StringBuilder();
 		stringBuilder.append("lastCriteria().");
-		stringBuilder.append(method.getName());
-		stringBuilder.append("(");
-		for (int i = 0; i < method.getParameters().size(); i++) {
-			Parameter parameter = method.getParameters().get(i);
-			stringBuilder.append(parameter.getName());
-			if (i == method.getParameters().size() - 1) {
-				stringBuilder.append(");");
-			} else {
-				stringBuilder.append(", ");
-			}
-		}
-		if (method.getParameters().isEmpty()) {
-			stringBuilder.append(");");
-		}
+		stringBuilder.append(firstLine);
 		method.addBodyLine(stringBuilder.toString());
 		method.addBodyLine("return this;");
 		return method;
 	}
 	
+	private void clearCriteriaMethods(TopLevelClass topLevelClass) {
+		List<InnerClass> classes = topLevelClass.getInnerClasses();
+		for (InnerClass clazz: classes) {
+			if ("GeneratedCriteria".equals(clazz.getType().getShortName())) {
+				Iterator<Method> iterator = clazz.getMethods().iterator();
+				while (iterator.hasNext())  {
+					Method method = iterator.next();
+					if (method.getName().startsWith("and") &&
+						"Criteria".equals(method.getReturnType().getShortName())) {
+						iterator.remove();
+					}
+				}
+			}
+		}
+	}
+	
+	private void replaceRuntimeException(TopLevelClass topLevelClass) {
+		List<InnerClass> classes = topLevelClass.getInnerClasses();
+		for (InnerClass clazz: classes) {
+			for (Method method : clazz.getMethods()) {
+				List<String> lines = new LinkedList<>();
+				for (String line : method.getBodyLines()) {
+					lines.add(line.replace("RuntimeException", "IllegalArgumentException"));
+				}
+				method.getBodyLines().clear();
+				method.getBodyLines().addAll(lines);
+			}
+		}
+	}
 	
 	private void buildColumnMap(TopLevelClass topLevelClass, IntrospectedTable table) {
 		topLevelClass.addImportedType(new FullyQualifiedJavaType("java.util.Map"));
@@ -369,11 +386,12 @@ public class YobatisCriteriaPlugin extends PluginAdapter {
 		Method method = new Method("ascOrderBy");
 		method.setVisibility(JavaVisibility.PUBLIC);
 		method.setReturnType(topLevelClass.getType());
+		String name = topLevelClass.getType().getShortName();
 		method.addParameter(new Parameter(new FullyQualifiedJavaType("String "), " ... fields"));
 		method.addBodyLine("orderBy(\"asc\", fields);");
 		method.addBodyLine("return this;");
 		method.addJavaDocLine("/**");
-		method.addJavaDocLine(" * Add the 'order by field1 asc, field2 asc, ...' clause to query, only fields in {@code Customer} are allowed.");
+		method.addJavaDocLine(" * Add the 'order by field1 asc, field2 asc, ...' clause to query, only fields in {@code " + name.replaceFirst("Criteria$", "") + "}(not column names) are allowed.");
 		method.addJavaDocLine(" * By invoking this method and {@link #descOrderBy(String...) descOrderBy} alternately, a more complex 'order by' clause");
 		method.addJavaDocLine(" * can be constructed, shown as below.");
 		method.addJavaDocLine(" * <pre>");
@@ -393,10 +411,11 @@ public class YobatisCriteriaPlugin extends PluginAdapter {
 		method.setVisibility(JavaVisibility.PUBLIC);
 		method.setReturnType(topLevelClass.getType());
 		method.addParameter(new Parameter(new FullyQualifiedJavaType("String "), " ... fields"));
+		String name = topLevelClass.getType().getShortName();
 		method.addBodyLine("orderBy(\"desc\", fields);");
 		method.addBodyLine("return this;");
 		method.addJavaDocLine("/**");
-		method.addJavaDocLine(" * Add the 'order by field1 desc, field2 desc, ...' clause to query, only fields in {@code Customer} are allowed.");
+		method.addJavaDocLine(" * Add the 'order by field1 desc, field2 desc, ...' clause to query, only fields in {@code " + name.replaceFirst("Criteria$", "") +"}(not column names) are allowed.");
 		method.addJavaDocLine(" * By invoking this method and {@link #ascOrderBy(String...) ascOrderBy} alternately, a more complex 'order by' clause");
 		method.addJavaDocLine(" * can be constructed, shown as below.");
 		method.addJavaDocLine(" * <pre>");
@@ -439,5 +458,7 @@ public class YobatisCriteriaPlugin extends PluginAdapter {
 				topLevelClass.addMethod(proxyMethod(method, topLevelClass));
 			}
 		}
+		clearCriteriaMethods(topLevelClass);
+		replaceRuntimeException(topLevelClass);
 	}
 }
